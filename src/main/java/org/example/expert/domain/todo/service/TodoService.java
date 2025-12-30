@@ -17,14 +17,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class TodoService {
 
     private final TodoRepository todoRepository;
     private final WeatherClient weatherClient;
 
+    @Transactional(readOnly = false)
     public TodoSaveResponse saveTodo(AuthUser authUser, TodoSaveRequest todoSaveRequest) {
         User user = User.fromAuthUser(authUser);
 
@@ -34,6 +37,7 @@ public class TodoService {
                 todoSaveRequest.getTitle(),
                 todoSaveRequest.getContents(),
                 weather,
+
                 user
         );
         Todo savedTodo = todoRepository.save(newTodo);
@@ -47,11 +51,27 @@ public class TodoService {
         );
     }
 
-    public Page<TodoResponse> getTodos(int page, int size) {
+    @Transactional(readOnly = true)
+    public Page<TodoResponse> getTodos(int page, int size, String weather, LocalDateTime startDate, LocalDateTime endDate) {
         Pageable pageable = PageRequest.of(page - 1, size);
 
         Page<Todo> todos = todoRepository.findAllByOrderByModifiedAtDesc(pageable);
 
+        boolean hasWeather = (weather != null && !weather.isBlank());
+        boolean hasPeriod = (startDate != null && endDate != null);
+
+        if (hasWeather && hasPeriod) {
+            todos = todoRepository.findByWeatherAndModifiedAtBetweenOrderByModifiedAtDesc(weather, startDate, endDate, pageable);
+        } else if (hasWeather) {
+            //날씨만 검색
+            todos = todoRepository.findByWeatherOrderByModifiedAtDesc(weather, pageable);
+        } else if (hasPeriod) {
+            //기간만 검색
+            todos = todoRepository.findByModifiedAtBetweenOrderByModifiedAtDesc(startDate, endDate, pageable);
+        } else {
+            //둘 다 X -> 전체 목록
+            todos = todoRepository.findAllByOrderByModifiedAtDesc(pageable);
+        }
         return todos.map(todo -> new TodoResponse(
                 todo.getId(),
                 todo.getTitle(),
@@ -63,6 +83,7 @@ public class TodoService {
         ));
     }
 
+    @Transactional(readOnly = true)
     public TodoResponse getTodo(long todoId) {
         Todo todo = todoRepository.findByIdWithUser(todoId)
                 .orElseThrow(() -> new InvalidRequestException("Todo not found"));
