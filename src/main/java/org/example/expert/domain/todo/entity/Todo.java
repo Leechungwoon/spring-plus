@@ -1,6 +1,7 @@
 package org.example.expert.domain.todo.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.expert.domain.comment.entity.Comment;
@@ -22,6 +23,7 @@ public class Todo extends Timestamped {
     private String title;
     private String contents;
     private String weather;
+    private String period;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -30,14 +32,20 @@ public class Todo extends Timestamped {
     @OneToMany(mappedBy = "todo", cascade = CascadeType.REMOVE)
     private List<Comment> comments = new ArrayList<>();
 
-    @OneToMany(mappedBy = "todo")
+    //할 일을 로 저장할 시, 할 일을 생성한 유저는 담당자로 자동 등록되어야 합니다.
+    @OneToMany(mappedBy = "todo", cascade = CascadeType.PERSIST)
     private List<Manager> managers = new ArrayList<>();
 
     public Todo(String title, String contents, String weather, User user) {
         this.title = title;
         this.contents = contents;
         this.weather = weather;
+//        this.period = period;
         this.user = user;
-        this.managers.add(new Manager(user, this));
+        this.managers.add(new Manager(user, this)); //생성자에서 담당자 등록
+    }
+
+    public void add(User user) {
+        this.managers.add(new Manager(user,this)); //메서드에서 담당자 등록
     }
 }
