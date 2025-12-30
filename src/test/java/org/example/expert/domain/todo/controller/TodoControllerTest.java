@@ -1,5 +1,7 @@
 package org.example.expert.domain.todo.controller;
 
+import org.example.expert.config.JwtFilter;
+import org.example.expert.config.JwtUtil;
 import org.example.expert.domain.common.dto.AuthUser;
 import org.example.expert.domain.common.exception.InvalidRequestException;
 import org.example.expert.domain.todo.dto.response.TodoResponse;
@@ -29,6 +31,12 @@ class TodoControllerTest {
 
     @MockBean
     private TodoService todoService;
+
+    @MockBean
+    private JwtUtil jwtUtil;   // JWT 유틸 Mock
+
+    @MockBean
+    private JwtFilter jwtFilter;  // JWT 필터 Mock (Security 관련)
 
     @Test
     void todo_단건_조회에_성공한다() throws Exception {
